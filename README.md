@@ -51,14 +51,16 @@ AI-Software-Requirement-Validator/
 ## Application Screenshots
 
 ### Home Page
-![Home Page]("C:\Users\Rakshali patidar\OneDrive\Pictures\Screenshots\home.png")
+
+![Home Page](screenshots/home.png)
 
 ### Dashboard
-![Dashboard]("C:\Users\Rakshali patidar\OneDrive\Pictures\Screenshots\dashboard.png")
+
+![Dashboard](screenshots/dashboard.png)
 
 ### Validation Results
-![Validation Results]("C:\Users\Rakshali patidar\OneDrive\Pictures\Screenshots\validation-result.png")
 
+![Validation Results](screenshots/validation-result.png)
 ## Prerequisites
 
 Install the following before running the application:
