@@ -1,0 +1,69 @@
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Node.js dependencies
+node_modules/
+**/node_modules/
+
+# Frontend build output
+dist/
+build/
+**/dist/
+**/build/
+
+# Python virtual environments and cache
+.venv/
+**/.venv/
+venv/
+**/venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+
+# Java / Maven build output
+target/
+**/target/
+
+# Uploaded documents
+uploads/
+**/uploads/
+
+# IDE and operating system files
+.vscode/
+**/.vscode/
+.idea/
+**/.idea/
+*.iml
+*.iws
+*.ipr
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Java generated files
+.classpath
+.project
+.factorypath
+.settings/
+.apt_generated/
+.springBeans
+.sts4-cache/
+HELP.md
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/nbdist/
+/.nb-gradle/
+
+backend/boot-error.txt
+
