@@ -48,6 +48,17 @@ AI-Software-Requirement-Validator/
 └── README.md
 ```
 
+## Application Screenshots
+
+### Home Page
+![Home Page]("C:\Users\Rakshali patidar\OneDrive\Pictures\Screenshots\home.png")
+
+### Dashboard
+![Dashboard]("C:\Users\Rakshali patidar\OneDrive\Pictures\Screenshots\dashboard.png")
+
+### Validation Results
+![Validation Results]("C:\Users\Rakshali patidar\OneDrive\Pictures\Screenshots\validation-result.png")
+
 ## Prerequisites
 
 Install the following before running the application:
