@@ -67,3 +67,6 @@ HELP.md
 
 backend/boot-error.txt
 
+
+# Local backup files
+*.java.bak

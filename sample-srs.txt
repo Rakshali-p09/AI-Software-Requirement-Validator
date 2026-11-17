@@ -1,0 +1,10 @@
+﻿Software Requirements Specification
+
+1. Requirements
+- The system shall allow users to register with an email address.
+- The system shall allow users to log in securely.
+- The system must allow users to create projects.
+- The system should display validation results.
+
+2. Conclusion
+This document describes the system requirements.

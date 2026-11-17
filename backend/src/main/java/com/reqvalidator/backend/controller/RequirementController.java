@@ -1,3 +1,4 @@
+
 package com.reqvalidator.backend.controller;
 
 import java.util.List;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -44,61 +46,50 @@ public class RequirementController {
             @RequestBody Requirement requirement,
             Authentication authentication) {
 
-        String authenticatedEmail =
-                authentication.getName();
+        String authenticatedEmail = authentication.getName();
 
-        // Check project exists
-        Project project =
-                projectRepository.findById(
-                        requirement.getProjectId()
-                ).orElse(null);
+        if (requirement.getProjectId() == null
+                || requirement.getProjectId().trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body("Project ID is required.");
+        }
+
+        if (requirement.getRequirementText() == null
+                || requirement.getRequirementText().trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body("Requirement text cannot be empty.");
+        }
+
+        Project project = projectRepository
+                .findById(requirement.getProjectId())
+                .orElse(null);
 
         if (project == null) {
-            return ResponseEntity
-                    .status(HttpStatus.NOT_FOUND)
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("Project not found.");
         }
 
-        // Check project ownership
         if (!authenticatedEmail.equalsIgnoreCase(
                 project.getOwnerEmail())) {
-
-            return ResponseEntity
-                    .status(HttpStatus.FORBIDDEN)
-                    .body(
-                            "You are not allowed to add requirements to this project."
-                    );
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You are not allowed to add requirements to this project.");
         }
 
-        /*
-         * Generate a human-readable requirement ID
-         * based on the number of requirements already
-         * present in the project.
-         */
+        long existingCount = requirementRepository
+                .countByProjectId(requirement.getProjectId());
 
-        long existingCount =
-                requirementRepository.countByProjectId(
-                        requirement.getProjectId()
-                );
+        String requirementId = String.format(
+                "REQ-%03d", existingCount + 1);
 
-        String requirementId =
-                String.format(
-                        "REQ-%03d",
-                        existingCount + 1
-                );
-
-        requirement.setRequirementId(
-                requirementId
-        );
+        requirement.setRequirementId(requirementId);
+        requirement.setRequirementText(
+                requirement.getRequirementText().trim());
 
         Requirement savedRequirement =
-                requirementRepository.save(
-                        requirement
-                );
+                requirementRepository.save(requirement);
 
-        return ResponseEntity.ok(
-                savedRequirement
-        );
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(savedRequirement);
     }
 
     // =========================================================
@@ -110,39 +101,27 @@ public class RequirementController {
             @PathVariable String projectId,
             Authentication authentication) {
 
-        String authenticatedEmail =
-                authentication.getName();
+        String authenticatedEmail = authentication.getName();
 
-        Project project =
-                projectRepository.findById(
-                        projectId
-                ).orElse(null);
+        Project project = projectRepository
+                .findById(projectId)
+                .orElse(null);
 
         if (project == null) {
-            return ResponseEntity
-                    .status(HttpStatus.NOT_FOUND)
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("Project not found.");
         }
 
-        // Only project owner can see its requirements
         if (!authenticatedEmail.equalsIgnoreCase(
                 project.getOwnerEmail())) {
-
-            return ResponseEntity
-                    .status(HttpStatus.FORBIDDEN)
-                    .body(
-                            "You are not allowed to access this project's requirements."
-                    );
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You are not allowed to access this project's requirements.");
         }
 
         List<Requirement> requirements =
-                requirementRepository.findByProjectId(
-                        projectId
-                );
+                requirementRepository.findByProjectId(projectId);
 
-        return ResponseEntity.ok(
-                requirements
-        );
+        return ResponseEntity.ok(requirements);
     }
 
     // =========================================================
@@ -154,47 +133,102 @@ public class RequirementController {
             @PathVariable String id,
             Authentication authentication) {
 
-        String authenticatedEmail =
-                authentication.getName();
+        String authenticatedEmail = authentication.getName();
 
-        return requirementRepository
-                .findById(id)
+        return requirementRepository.findById(id)
                 .map(requirement -> {
 
-                    Project project =
-                            projectRepository.findById(
-                                    requirement.getProjectId()
-                            ).orElse(null);
+                    Project project = projectRepository
+                            .findById(requirement.getProjectId())
+                            .orElse(null);
 
                     if (project == null) {
                         return ResponseEntity
                                 .status(HttpStatus.NOT_FOUND)
-                                .body(
-                                        "Project not found."
-                                );
+                                .body("Project not found.");
                     }
 
                     if (!authenticatedEmail.equalsIgnoreCase(
                             project.getOwnerEmail())) {
-
                         return ResponseEntity
                                 .status(HttpStatus.FORBIDDEN)
-                                .body(
-                                        "You are not allowed to access this requirement."
-                                );
+                                .body("You are not allowed to access this requirement.");
                     }
 
-                    return ResponseEntity.ok(
-                            requirement
-                    );
+                    return ResponseEntity.ok(requirement);
                 })
                 .orElse(
-                        ResponseEntity
+                        ResponseEntity.status(HttpStatus.NOT_FOUND)
+                                .body("Requirement not found."));
+    }
+
+    // =========================================================
+    // UPDATE REQUIREMENT TEXT
+    // =========================================================
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateRequirement(
+            @PathVariable String id,
+            @RequestBody Requirement updatedData,
+            Authentication authentication) {
+
+        String authenticatedEmail = authentication.getName();
+
+        return requirementRepository.findById(id)
+                .map(requirement -> {
+
+                    Project project = projectRepository
+                            .findById(requirement.getProjectId())
+                            .orElse(null);
+
+                    if (project == null) {
+                        return ResponseEntity
                                 .status(HttpStatus.NOT_FOUND)
-                                .body(
-                                        "Requirement not found."
-                                )
-                );
+                                .body("Project not found.");
+                    }
+
+                    if (!authenticatedEmail.equalsIgnoreCase(
+                            project.getOwnerEmail())) {
+                        return ResponseEntity
+                                .status(HttpStatus.FORBIDDEN)
+                                .body("You are not allowed to update this requirement.");
+                    }
+
+                    if (updatedData.getRequirementText() == null
+                            || updatedData.getRequirementText()
+                                    .trim().isEmpty()) {
+                        return ResponseEntity.badRequest()
+                                .body("Requirement text cannot be empty.");
+                    }
+
+                    requirement.setRequirementText(
+                            updatedData.getRequirementText().trim());
+
+                    // Clear old validation results because the text changed.
+                    requirement.setClarity(null);
+                    requirement.setAmbiguity(null);
+                    requirement.setCompleteness(null);
+                    requirement.setConsistency(null);
+                    requirement.setConsistencyWith(null);
+                    requirement.setConsistencyReason(null);
+                    requirement.setTestability(null);
+                    requirement.setMeasurability(null);
+                    requirement.setDuplicateStatus(null);
+                    requirement.setDuplicateSimilarity(null);
+                    requirement.setDuplicateWith(null);
+                    requirement.setIssues(null);
+                    requirement.setSuggestions(null);
+                    requirement.setQualityScore(null);
+                    requirement.setStatus(null);
+
+                    Requirement savedRequirement =
+                            requirementRepository.save(requirement);
+
+                    return ResponseEntity.ok(savedRequirement);
+                })
+                .orElse(
+                        ResponseEntity.status(HttpStatus.NOT_FOUND)
+                                .body("Requirement not found."));
     }
 
     // =========================================================
@@ -206,50 +240,35 @@ public class RequirementController {
             @PathVariable String id,
             Authentication authentication) {
 
-        String authenticatedEmail =
-                authentication.getName();
+        String authenticatedEmail = authentication.getName();
 
-        return requirementRepository
-                .findById(id)
+        return requirementRepository.findById(id)
                 .map(requirement -> {
 
-                    Project project =
-                            projectRepository.findById(
-                                    requirement.getProjectId()
-                            ).orElse(null);
+                    Project project = projectRepository
+                            .findById(requirement.getProjectId())
+                            .orElse(null);
 
                     if (project == null) {
                         return ResponseEntity
                                 .status(HttpStatus.NOT_FOUND)
-                                .body(
-                                        "Project not found."
-                                );
+                                .body("Project not found.");
                     }
 
                     if (!authenticatedEmail.equalsIgnoreCase(
                             project.getOwnerEmail())) {
-
                         return ResponseEntity
                                 .status(HttpStatus.FORBIDDEN)
-                                .body(
-                                        "You are not allowed to delete this requirement."
-                                );
+                                .body("You are not allowed to delete this requirement.");
                     }
 
-                    requirementRepository.deleteById(
-                            id
-                    );
+                    requirementRepository.deleteById(id);
 
                     return ResponseEntity.ok(
-                            "Requirement deleted successfully."
-                    );
+                            "Requirement deleted successfully.");
                 })
                 .orElse(
-                        ResponseEntity
-                                .status(HttpStatus.NOT_FOUND)
-                                .body(
-                                        "Requirement not found."
-                                )
-                );
+                        ResponseEntity.status(HttpStatus.NOT_FOUND)
+                                .body("Requirement not found."));
     }
 }

@@ -27,8 +27,8 @@ public class LlmAnalysisService {
         SimpleClientHttpRequestFactory requestFactory =
                 new SimpleClientHttpRequestFactory();
 
-        requestFactory.setConnectTimeout(5000);
-        requestFactory.setReadTimeout(30000);
+        requestFactory.setConnectTimeout(10000);
+        requestFactory.setReadTimeout(120000);
 
         this.restClient = RestClient.builder()
                 .requestFactory(requestFactory)

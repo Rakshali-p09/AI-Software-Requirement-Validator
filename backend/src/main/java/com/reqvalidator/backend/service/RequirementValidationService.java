@@ -1,3 +1,4 @@
+
 package com.reqvalidator.backend.service;
 
 import java.util.ArrayList;
@@ -14,107 +15,33 @@ import com.reqvalidator.backend.model.Requirement;
 @Service
 public class RequirementValidationService {
 
-    /*
-     * =========================================================
-     * AMBIGUOUS WORDS
-     * =========================================================
-     */
-
     private static final Set<String> AMBIGUOUS_WORDS = new HashSet<>(
             Arrays.asList(
-                    "quickly",
-                    "fast",
-                    "easily",
-                    "easy",
-                    "simple",
-                    "user-friendly",
-                    "efficiently",
-                    "efficient",
-                    "appropriate",
-                    "reasonable",
-                    "soon",
-                    "adequate",
-                    "good",
-                    "better",
-                    "normally",
-                    "usually",
-                    "etc",
-                    "etc."
+                    "quickly", "fast", "easily", "easy", "simple",
+                    "user-friendly", "efficiently", "efficient",
+                    "appropriate", "reasonable", "soon", "adequate",
+                    "good", "better", "normally", "usually", "etc", "etc."
             )
     );
-
-    /*
-     * =========================================================
-     * MEASUREMENT WORDS
-     * =========================================================
-     */
 
     private static final Set<String> MEASUREMENT_WORDS = new HashSet<>(
             Arrays.asList(
-                    "seconds",
-                    "second",
-                    "milliseconds",
-                    "millisecond",
-                    "minutes",
-                    "minute",
-                    "hours",
-                    "hour",
-                    "percent",
-                    "%",
-                    "maximum",
-                    "minimum",
-                    "at least",
-                    "at most",
-                    "less than",
-                    "greater than",
-                    "within",
-                    "limit"
+                    "seconds", "second", "milliseconds", "millisecond",
+                    "minutes", "minute", "hours", "hour", "percent", "%",
+                    "maximum", "minimum", "at least", "at most",
+                    "less than", "greater than", "within", "limit"
             )
     );
-
-    /*
-     * =========================================================
-     * OBSERVABLE ACTIONS
-     * =========================================================
-     *
-     * These actions describe behavior that can be observed
-     * during testing.
-     */
 
     private static final Set<String> OBSERVABLE_ACTIONS = new HashSet<>(
             Arrays.asList(
-                    "display",
-                    "show",
-                    "generate",
-                    "create",
-                    "delete",
-                    "update",
-                    "store",
-                    "save",
-                    "send",
-                    "receive",
-                    "upload",
-                    "download",
-                    "validate",
-                    "calculate",
-                    "notify",
-                    "allow",
-                    "prevent",
-                    "reject",
-                    "accept",
-                    "authenticate",
-                    "redirect",
-                    "return",
-                    "provide",
-                    "process"
+                    "display", "show", "generate", "create", "delete",
+                    "update", "store", "save", "send", "receive", "upload",
+                    "download", "validate", "calculate", "notify", "allow",
+                    "prevent", "reject", "accept", "authenticate",
+                    "redirect", "return", "provide", "process", "respond"
             )
     );
-
-    /*
-     * =========================================================
-     * MAIN VALIDATION
-     * =========================================================
-     */
 
     public Requirement validate(Requirement requirement) {
 
@@ -123,12 +50,7 @@ public class RequirementValidationService {
         List<String> issues = new ArrayList<>();
         List<String> suggestions = new ArrayList<>();
 
-        /*
-         * Empty requirement check
-         */
-
         if (text == null || text.isBlank()) {
-
             requirement.setClarity("FAIL");
             requirement.setAmbiguity("FAIL");
             requirement.setCompleteness("FAIL");
@@ -140,10 +62,7 @@ public class RequirementValidationService {
             requirement.setStatus("Poor");
 
             issues.add("The requirement text is empty.");
-
-            suggestions.add(
-                    "Provide a clear and specific requirement."
-            );
+            suggestions.add("Provide a clear and specific requirement.");
 
             requirement.setIssues(issues);
             requirement.setSuggestions(suggestions);
@@ -151,114 +70,26 @@ public class RequirementValidationService {
             return requirement;
         }
 
-        text = text.trim();
+        text = text.trim().toLowerCase();
 
-        String lowerText = text.toLowerCase();
+        boolean clarityPass = checkClarity(text);
+        boolean ambiguityPass = checkAmbiguity(text);
+        boolean completenessPass = checkCompleteness(text);
+        boolean testabilityPass = checkTestability(text);
+        boolean measurabilityPass = checkMeasurability(text);
 
-        /*
-         * Run validation checks
-         */
-
-        boolean clarityPass =
-                checkClarity(lowerText);
-
-        boolean ambiguityPass =
-                checkAmbiguity(lowerText);
-
-        boolean completenessPass =
-                checkCompleteness(lowerText);
-
-        boolean testabilityPass =
-                checkTestability(lowerText);
-
-        boolean measurabilityPass =
-                checkMeasurability(lowerText);
-
-        /*
-         * Store validation results
-         */
-
-        requirement.setClarity(
-                clarityPass ? "PASS" : "FAIL"
-        );
-
-        requirement.setAmbiguity(
-                ambiguityPass ? "PASS" : "FAIL"
-        );
-
-        requirement.setCompleteness(
-                completenessPass ? "PASS" : "FAIL"
-        );
-
-        /*
-         * Consistency is handled separately
-         */
-
+        requirement.setClarity(clarityPass ? "PASS" : "FAIL");
+        requirement.setAmbiguity(ambiguityPass ? "PASS" : "FAIL");
+        requirement.setCompleteness(completenessPass ? "PASS" : "FAIL");
         requirement.setConsistency("PENDING");
+        requirement.setTestability(testabilityPass ? "PASS" : "FAIL");
+        requirement.setMeasurability(measurabilityPass ? "PASS" : "FAIL");
 
-        requirement.setTestability(
-                testabilityPass ? "PASS" : "FAIL"
-        );
-
-        requirement.setMeasurability(
-                measurabilityPass ? "PASS" : "FAIL"
-        );
-
-        /*
-         * Generate feedback
-         */
-
-        generateClarityFeedback(
-                lowerText,
-                clarityPass,
-                issues,
-                suggestions
-        );
-
-        generateAmbiguityFeedback(
-                lowerText,
-                ambiguityPass,
-                issues,
-                suggestions
-        );
-
-        generateCompletenessFeedback(
-                lowerText,
-                completenessPass,
-                issues,
-                suggestions
-        );
-
-        generateTestabilityFeedback(
-                lowerText,
-                testabilityPass,
-                issues,
-                suggestions
-        );
-
-        generateMeasurabilityFeedback(
-                lowerText,
-                measurabilityPass,
-                issues,
-                suggestions
-        );
-
-        /*
-         * =====================================================
-         * BASE SCORE
-         * =====================================================
-         *
-         * Clarity        = 15
-         * Ambiguity      = 20
-         * Completeness   = 20
-         * Testability    = 15
-         * Measurability  = 15
-         *
-         * Maximum = 85
-         *
-         * Consistency and duplicate points are added later
-         * by ValidationController.
-         */
+        generateClarityFeedback(text, clarityPass, issues, suggestions);
+        generateAmbiguityFeedback(text, ambiguityPass, issues, suggestions);
+        generateCompletenessFeedback(text, completenessPass, issues, suggestions);
+        generateTestabilityFeedback(text, testabilityPass, issues, suggestions);
+        generateMeasurabilityFeedback(text, measurabilityPass, issues, suggestions);
 
         int score = calculateBaseScore(
                 clarityPass,
@@ -270,23 +101,11 @@ public class RequirementValidationService {
 
         requirement.setQualityScore(score);
 
-        /*
-         * Temporary status
-         *
-         * Final status is calculated after
-         * duplicate and consistency detection.
-         */
-
         if (score >= 68) {
-
             requirement.setStatus("Good");
-
         } else if (score >= 51) {
-
             requirement.setStatus("Needs Improvement");
-
         } else {
-
             requirement.setStatus("Poor");
         }
 
@@ -296,15 +115,9 @@ public class RequirementValidationService {
         return requirement;
     }
 
-    /*
-     * =========================================================
-     * CLARITY
-     * Weight: 15
-     * =========================================================
-     */
+    // CLARITY
 
     private boolean checkClarity(String text) {
-
         if (text.length() < 15) {
             return false;
         }
@@ -323,7 +136,6 @@ public class RequirementValidationService {
             List<String> suggestions) {
 
         if (!passed) {
-
             issues.add(
                     "The requirement is not clearly expressed as a system requirement."
             );
@@ -334,32 +146,11 @@ public class RequirementValidationService {
         }
     }
 
-    /*
-     * =========================================================
-     * AMBIGUITY
-     * Weight: 20
-     * =========================================================
-     */
+    // AMBIGUITY
 
     private boolean checkAmbiguity(String text) {
-
-        String normalizedText = text.toLowerCase();
-
         for (String word : AMBIGUOUS_WORDS) {
-
-            String normalizedWord =
-                    word.toLowerCase().trim();
-
-            if (normalizedWord.isEmpty()) {
-                continue;
-            }
-
-            String pattern =
-                    ".*\\b"
-                            + Pattern.quote(normalizedWord)
-                            + "\\b.*";
-
-            if (normalizedText.matches(pattern)) {
+            if (containsWholeWord(text, word)) {
                 return false;
             }
         }
@@ -374,40 +165,23 @@ public class RequirementValidationService {
             List<String> suggestions) {
 
         if (!passed) {
-
-            String foundWord =
-                    findAmbiguousWord(text);
+            String foundWord = findAmbiguousWord(text);
 
             issues.add(
                     "The requirement contains an ambiguous term: '"
-                            + foundWord
-                            + "'."
+                            + foundWord + "'."
             );
 
             suggestions.add(
-                    "Replace '"
-                            + foundWord
+                    "Replace '" + foundWord
                             + "' with a specific and measurable value or condition."
             );
         }
     }
 
     private String findAmbiguousWord(String text) {
-
-        String normalizedText =
-                text.toLowerCase();
-
         for (String word : AMBIGUOUS_WORDS) {
-
-            String normalizedWord =
-                    word.toLowerCase().trim();
-
-            String pattern =
-                    ".*\\b"
-                            + Pattern.quote(normalizedWord)
-                            + "\\b.*";
-
-            if (normalizedText.matches(pattern)) {
+            if (containsWholeWord(text, word)) {
                 return word;
             }
         }
@@ -415,12 +189,7 @@ public class RequirementValidationService {
         return "unclear wording";
     }
 
-    /*
-     * =========================================================
-     * COMPLETENESS
-     * Weight: 20
-     * =========================================================
-     */
+    // COMPLETENESS
 
     private boolean checkCompleteness(String text) {
 
@@ -428,7 +197,8 @@ public class RequirementValidationService {
                 text.contains("shall")
                         || text.contains("must")
                         || text.contains("should")
-                        || text.contains("required to");
+                        || text.contains("required to")
+                        || text.contains("needs to");
 
         if (!hasRequirementKeyword) {
             return false;
@@ -438,24 +208,16 @@ public class RequirementValidationService {
             return false;
         }
 
-        return text.contains("allow")
-                || text.contains("provide")
-                || text.contains("display")
-                || text.contains("generate")
-                || text.contains("create")
-                || text.contains("delete")
-                || text.contains("update")
-                || text.contains("store")
-                || text.contains("validate")
-                || text.contains("send")
-                || text.contains("receive")
-                || text.contains("upload")
-                || text.contains("download")
-                || text.contains("process")
-                || text.contains("calculate")
-                || text.contains("manage")
-                || text.contains("authenticate")
-                || text.contains("notify");
+        return containsAnyWholeWord(
+                text,
+                Arrays.asList(
+                        "allow", "provide", "display", "generate",
+                        "create", "delete", "update", "store",
+                        "validate", "send", "receive", "upload",
+                        "download", "process", "calculate", "manage",
+                        "authenticate", "notify", "respond"
+                )
+        );
     }
 
     private void generateCompletenessFeedback(
@@ -465,7 +227,6 @@ public class RequirementValidationService {
             List<String> suggestions) {
 
         if (!passed) {
-
             issues.add(
                     "The requirement may be incomplete because it does not clearly describe the expected system behavior."
             );
@@ -476,54 +237,30 @@ public class RequirementValidationService {
         }
     }
 
-    /*
-     * =========================================================
-     * TESTABILITY
-     * Weight: 15
-     * =========================================================
-     */
+    // TESTABILITY
 
     private boolean checkTestability(String text) {
-
-        /*
-         * A requirement must first be written as
-         * an actual requirement.
-         */
 
         boolean hasRequirementKeyword =
                 text.contains("shall")
                         || text.contains("must")
                         || text.contains("should")
-                        || text.contains("required to");
+                        || text.contains("required to")
+                        || text.contains("needs to");
 
         if (!hasRequirementKeyword) {
             return false;
         }
 
-        /*
-         * Ambiguous requirements are difficult to
-         * verify objectively.
-         */
-
         if (!checkAmbiguity(text)) {
             return false;
         }
-
-        /*
-         * A measurable condition makes the requirement
-         * directly testable.
-         */
 
         if (checkMeasurability(text)) {
             return true;
         }
 
-        /*
-         * Otherwise, look for an observable system action.
-         */
-
         for (String action : OBSERVABLE_ACTIONS) {
-
             if (containsWholeWord(text, action)) {
                 return true;
             }
@@ -539,7 +276,6 @@ public class RequirementValidationService {
             List<String> suggestions) {
 
         if (!passed) {
-
             issues.add(
                     "The requirement may be difficult to verify objectively."
             );
@@ -550,17 +286,10 @@ public class RequirementValidationService {
         }
     }
 
-    /*
-     * =========================================================
-     * MEASURABILITY
-     * Weight: 15
-     * =========================================================
-     */
+    // MEASURABILITY
 
     private boolean checkMeasurability(String text) {
-
         for (String word : MEASUREMENT_WORDS) {
-
             if (text.contains(word)) {
                 return true;
             }
@@ -576,7 +305,6 @@ public class RequirementValidationService {
             List<String> suggestions) {
 
         if (!passed) {
-
             issues.add(
                     "The requirement does not contain a clear measurable condition."
             );
@@ -587,29 +315,24 @@ public class RequirementValidationService {
         }
     }
 
-    /*
-     * =========================================================
-     * HELPER - WHOLE WORD CHECK
-     * =========================================================
-     */
+    // HELPERS
 
-    private boolean containsWholeWord(
-            String text,
-            String word) {
+    private boolean containsAnyWholeWord(String text, List<String> words) {
+        for (String word : words) {
+            if (containsWholeWord(text, word)) {
+                return true;
+            }
+        }
 
-        String pattern =
-                ".*\\b"
-                        + Pattern.quote(word)
-                        + "\\b.*";
+        return false;
+    }
 
+    private boolean containsWholeWord(String text, String word) {
+        String pattern = ".*\\b" + Pattern.quote(word) + "\\b.*";
         return text.matches(pattern);
     }
 
-    /*
-     * =========================================================
-     * BASE SCORE
-     * =========================================================
-     */
+    // BASE SCORE
 
     private int calculateBaseScore(
             boolean clarity,
@@ -620,41 +343,21 @@ public class RequirementValidationService {
 
         int score = 0;
 
-        /*
-         * Clarity - 15 points
-         */
-
         if (clarity) {
             score += 15;
         }
-
-        /*
-         * Ambiguity - 20 points
-         */
 
         if (ambiguity) {
             score += 20;
         }
 
-        /*
-         * Completeness - 20 points
-         */
-
         if (completeness) {
             score += 20;
         }
 
-        /*
-         * Testability - 15 points
-         */
-
         if (testability) {
             score += 15;
         }
-
-        /*
-         * Measurability - 15 points
-         */
 
         if (measurability) {
             score += 15;

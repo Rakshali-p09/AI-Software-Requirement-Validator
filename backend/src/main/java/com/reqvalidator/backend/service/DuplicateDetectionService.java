@@ -1,3 +1,4 @@
+
 package com.reqvalidator.backend.service;
 
 import java.util.Arrays;
@@ -13,15 +14,8 @@ import com.reqvalidator.backend.model.Requirement;
 @Service
 public class DuplicateDetectionService {
 
-    /*
-     * Requirements with similarity >= 0.80
-     * are flagged as potential duplicates.
-     */
-    private static final double DUPLICATE_THRESHOLD = 0.80;
+    private static final double DUPLICATE_THRESHOLD = 0.70;
 
-    /**
-     * Analyze all requirements of a project.
-     */
     public List<Requirement> detectDuplicates(
             List<Requirement> requirements) {
 
@@ -29,71 +23,31 @@ public class DuplicateDetectionService {
             return requirements;
         }
 
-        /*
-         * Reset duplicate information before every analysis.
-         */
         for (Requirement requirement : requirements) {
-
             requirement.setDuplicateStatus("UNIQUE");
             requirement.setDuplicateSimilarity(0.0);
             requirement.setDuplicateWith(null);
         }
 
-        /*
-         * Compare every unique pair.
-         */
         for (int i = 0; i < requirements.size(); i++) {
-
             Requirement first = requirements.get(i);
 
             for (int j = i + 1; j < requirements.size(); j++) {
-
                 Requirement second = requirements.get(j);
 
+                String firstText = first.getRequirementText();
+                String secondText = second.getRequirementText();
+
+                if (hasOppositeBehavior(firstText, secondText)) {
+                    continue;
+                }
+
                 double similarity = calculateSimilarity(
-                        first.getRequirementText(),
-                        second.getRequirementText()
-                );
+                        firstText, secondText);
 
                 if (similarity >= DUPLICATE_THRESHOLD) {
-
-                    /*
-                     * Update first requirement.
-                     */
-                    if (first.getDuplicateSimilarity() == null
-                            || similarity > first.getDuplicateSimilarity()) {
-
-                        first.setDuplicateStatus(
-                                "POTENTIAL_DUPLICATE"
-                        );
-
-                        first.setDuplicateSimilarity(
-                                round(similarity)
-                        );
-
-                        first.setDuplicateWith(
-                                second.getId()
-                        );
-                    }
-
-                    /*
-                     * Update second requirement.
-                     */
-                    if (second.getDuplicateSimilarity() == null
-                            || similarity > second.getDuplicateSimilarity()) {
-
-                        second.setDuplicateStatus(
-                                "POTENTIAL_DUPLICATE"
-                        );
-
-                        second.setDuplicateSimilarity(
-                                round(similarity)
-                        );
-
-                        second.setDuplicateWith(
-                                first.getId()
-                        );
-                    }
+                    updateBestMatch(first, second, similarity);
+                    updateBestMatch(second, first, similarity);
                 }
             }
         }
@@ -101,118 +55,117 @@ public class DuplicateDetectionService {
         return requirements;
     }
 
-    /**
-     * Calculate Jaccard similarity.
-     */
+    private void updateBestMatch(
+            Requirement requirement,
+            Requirement matchingRequirement,
+            double similarity) {
+
+        Double currentSimilarity = requirement.getDuplicateSimilarity();
+
+        if (currentSimilarity == null || similarity > currentSimilarity) {
+            requirement.setDuplicateStatus("POTENTIAL_DUPLICATE");
+            requirement.setDuplicateSimilarity(round(similarity));
+            requirement.setDuplicateWith(matchingRequirement.getId());
+        }
+    }
+
+    private boolean hasOppositeBehavior(
+            String firstText, String secondText) {
+
+        if (firstText == null || secondText == null) {
+            return false;
+        }
+
+        String first = normalize(firstText);
+        String second = normalize(secondText);
+
+        boolean firstAllows = hasPositiveAction(first);
+        boolean secondAllows = hasPositiveAction(second);
+
+        boolean firstProhibits = hasNegativeAction(first);
+        boolean secondProhibits = hasNegativeAction(second);
+
+        return (firstAllows && secondProhibits)
+                || (firstProhibits && secondAllows);
+    }
+
+    private boolean hasPositiveAction(String text) {
+        return containsAny(text,
+                "allow", "enable", "permit");
+    }
+
+    private boolean hasNegativeAction(String text) {
+        return containsAny(text,
+                "prohibit", "forbid", "prevent", "disallow")
+                || text.matches(".*\\bnot\\s+(allow|enable|permit)\\b.*")
+                || text.matches(".*\\b(allow|enable|permit)\\s+not\\b.*");
+    }
+
+    private boolean containsAny(String text, String... words) {
+        for (String word : words) {
+            if (text.matches(".*\\b" + word + "\\b.*")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private double calculateSimilarity(
-            String firstText,
-            String secondText) {
+            String firstText, String secondText) {
 
         if (firstText == null || secondText == null) {
             return 0.0;
         }
 
-        Set<String> firstTokens =
-                tokenize(firstText);
+        Set<String> firstTokens = tokenize(firstText);
+        Set<String> secondTokens = tokenize(secondText);
 
-        Set<String> secondTokens =
-                tokenize(secondText);
-
-        if (firstTokens.isEmpty()
-                || secondTokens.isEmpty()) {
-
+        if (firstTokens.isEmpty() || secondTokens.isEmpty()) {
             return 0.0;
         }
 
-        Set<String> intersection =
-                new HashSet<>(firstTokens);
-
+        Set<String> intersection = new HashSet<>(firstTokens);
         intersection.retainAll(secondTokens);
 
-        Set<String> union =
-                new HashSet<>(firstTokens);
-
+        Set<String> union = new HashSet<>(firstTokens);
         union.addAll(secondTokens);
 
-        return (double) intersection.size()
-                / union.size();
+        return (double) intersection.size() / union.size();
     }
 
-    /**
-     * Normalize requirement text and create tokens.
-     */
     private Set<String> tokenize(String text) {
+        String normalized = normalize(text);
 
-        String normalized = text.toLowerCase();
+        Set<String> stopWords = new HashSet<>(Arrays.asList(
+                "the", "a", "an", "and", "or", "to", "of", "in",
+                "on", "for", "with", "shall", "should", "must",
+                "system", "be", "able", "will", "required"
+        ));
 
-        /*
-         * Normalize common equivalent phrases.
-         *
-         * This allows:
-         *
-         * login
-         * sign in
-         *
-         * to be treated as the same concept.
-         */
-        normalized = normalized
-                .replaceAll("\\bsign\\s+in\\b", "login")
-                .replaceAll("\\bsigned\\s+in\\b", "login")
-                .replaceAll("\\bsign\\s+up\\b", "register")
-                .replaceAll("\\bcreate\\s+an\\s+account\\b", "register")
-                .replaceAll("\\bregistration\\b", "register")
-                .replaceAll("\\bauthenticate\\b", "login")
-                .replaceAll("\\bauthentication\\b", "login");
-
-        /*
-         * Remove punctuation.
-         */
-        normalized = normalized
-                .replaceAll("[^a-z0-9\\s]", " ");
-
-        String[] words =
-                normalized.split("\\s+");
-
-        /*
-         * Common words that do not contribute much
-         * to duplicate detection.
-         */
-        Set<String> stopWords = new HashSet<>(
-                Arrays.asList(
-                        "the",
-                        "a",
-                        "an",
-                        "and",
-                        "or",
-                        "to",
-                        "of",
-                        "in",
-                        "on",
-                        "for",
-                        "with",
-                        "shall",
-                        "should",
-                        "must",
-                        "system",
-                        "be",
-                        "able",
-                        "will",
-                        "required"
-                )
-        );
-
-        return Arrays.stream(words)
+        return Arrays.stream(normalized.split("\\s+"))
                 .map(String::trim)
                 .filter(word -> !word.isEmpty())
                 .filter(word -> !stopWords.contains(word))
                 .collect(Collectors.toSet());
     }
 
-    /**
-     * Round similarity to two decimal places.
-     */
-    private double round(double value) {
+    private String normalize(String text) {
+        return text.toLowerCase()
+                .replaceAll("\\blet\\b", "allow")
+                .replaceAll("\\bthrough\\b", "using")
+                .replaceAll("\\bsign\\s+in\\b", "login")
+                .replaceAll("\\bsigned\\s+in\\b", "login")
+                .replaceAll("\\bsign\\s+up\\b", "register")
+                .replaceAll("\\bcreate\\s+an\\s+account\\b", "register")
+                .replaceAll("\\bregistration\\b", "register")
+                .replaceAll("\\bauthenticate\\b", "login")
+                .replaceAll("\\bauthentication\\b", "login")
+                .replaceAll("[^a-z0-9\\s]", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
 
+    private double round(double value) {
         return Math.round(value * 100.0) / 100.0;
     }
 }
